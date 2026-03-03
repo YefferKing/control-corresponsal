@@ -60,29 +60,39 @@ export default function NuevaSucursal() {
 
       if (permisosError) throw permisosError;
 
-      // 3. Crear el Rol Administrador para esta sucursal
-      const { data: roleData, error: roleError } = await supabase
-        .from('roles')
-        .insert([{
-          nombre: 'ADMINISTRADOR',
-          sucursal_id: sucursalId
-        }])
-        .select()
-        .single();
+      // 3. Determinar el Rol (MASTER si es el correo del dueño, sino ADMINISTRADOR regional)
+      let finalRoleId = '';
+      const isOwner = adminEmail.toLowerCase() === 'yeffersonpeinado@gmail.com';
 
-      if (roleError) throw roleError;
+      if (isOwner) {
+        // ID fijo del SISTEMA MASTER definido en database_init.sql
+        finalRoleId = '00000000-0000-0000-0000-000000000001';
+      } else {
+        // Crear el Rol Administrador local para esta sucursal
+        const { data: roleData, error: roleError } = await supabase
+          .from('roles')
+          .insert([{
+            nombre: 'ADMINISTRADOR',
+            sucursal_id: sucursalId
+          }])
+          .select()
+          .single();
 
-      // 4. Vincular todos los permisos al nuevo rol
-      const rolesPermisos = permisos.map(p => ({
-        rol_id: roleData.id,
-        permiso_slug: p.slug
-      }));
+        if (roleError) throw roleError;
+        finalRoleId = roleData.id;
 
-      const { error: rpError } = await supabase
-        .from('roles_permisos')
-        .insert(rolesPermisos);
+        // 4. Vincular todos los permisos al nuevo rol local
+        const rolesPermisos = permisos.map(p => ({
+          rol_id: finalRoleId,
+          permiso_slug: p.slug
+        }));
 
-      if (rpError) throw rpError;
+        const { error: rpError } = await supabase
+          .from('roles_permisos')
+          .insert(rolesPermisos);
+
+        if (rpError) throw rpError;
+      }
 
       // 5. Crear el Usuario en Auth (Sign Up)
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -100,8 +110,9 @@ export default function NuevaSucursal() {
           id: authData.user.id,
           nombre_completo: adminNombre,
           sucursal_id: sucursalId,
-          rol_id: roleData.id
+          rol_id: finalRoleId
         }]);
+
 
       if (profileError) throw profileError;
 
