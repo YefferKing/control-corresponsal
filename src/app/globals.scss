@@ -1,0 +1,219 @@
+/* Importar el CSS compilado de Bootstrap */
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* Personalización Bancolombia usando CSS Variables */
+:root {
+  --bs-primary: #ffdd00;
+  --bs-primary-rgb: 255, 221, 0;
+  --bs-dark: #2d2d2d;
+  --bs-dark-rgb: 45, 45, 45;
+  --sidebar-width: 280px;
+  --mobile-header-height: 70px;
+}
+
+body {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background-color: #f4f7f6;
+  margin: 0;
+}
+
+/* Estructura del Sidebar Vertical */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: #1a1a1a;
+  color: white;
+  position: fixed;
+  height: 100vh;
+  z-index: 2000;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  left: 0;
+
+  /* Estilos para Scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* También para el contenedor interno si tiene scroll independiente */
+  .overflow-auto {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 30px;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Typography Responsive Utilities */
+@media (max-width: 768px) {
+  .display-1 { font-size: 3rem !important; }
+  .display-2 { font-size: 2.5rem !important; }
+  .display-3 { font-size: 2.2rem !important; }
+  .display-4 { font-size: 1.8rem !important; }
+  .h1 { font-size: 1.5rem !important; }
+  .h2 { font-size: 1.25rem !important; }
+  .h3 { font-size: 1.1rem !important; }
+  .h5-md { font-size: 1.25rem !important; }
+}
+
+@media (min-width: 769px) {
+    .h5-md { font-size: 1.25rem !important; }
+}
+
+.mobile-header {
+  height: var(--mobile-header-height);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  border-bottom: 2px solid var(--bs-primary);
+  background: #1a1a1a !important; /* Asegurar fondo oscuro */
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7); /* Más oscuro para mejor enfoque */
+  backdrop-filter: blur(4px);
+  z-index: 1900;
+}
+
+.sidebar-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  transition: all 0.2s;
+  font-size: 0.95rem; /* Más pequeño para que quepa todo */
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  background-color: var(--bs-primary);
+  color: #000;
+  font-weight: 600;
+}
+
+.sidebar-link i {
+  font-size: 1.2rem;
+  margin-right: 12px;
+}
+
+.logo-container {
+  padding: 25px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-sucursal-box {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px; /* Menos margen en caja interna */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px; /* Más angosto en móvil */
+  }
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0;
+    margin-top: var(--mobile-header-height);
+    padding: 15px 10px; /* Padding más compacto en móvil */
+  }
+  .app-container {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+}
+
+.card {
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 15px;
+}
+
+/* Responsive Utilities for Dashboard */
+@media (min-width: 768px) {
+  .border-end-md {
+    border-right: 1px solid #dee2e6 !important;
+  }
+  .border-bottom-md-0 {
+    border-bottom: 0 !important;
+  }
+}
+
+.border-bottom {
+  border-bottom: 1px solid #dee2e6 !important;
+}
+
+.line-height-1 {
+  line-height: 1 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
