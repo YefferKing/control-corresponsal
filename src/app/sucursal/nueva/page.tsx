@@ -43,7 +43,8 @@ export default function NuevaSucursal() {
             nombre, 
             codigo_punto: codigoPunto, 
             cupo_actual: parseFloat(saldoInicial.replace(/\./g, '')), 
-            cupo_limite: parseFloat(cupoLimite.replace(/\./g, '')) 
+            cupo_limite: parseFloat(cupoLimite.replace(/\./g, '')),
+            fecha_expiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
           }
         ])
         .select()
