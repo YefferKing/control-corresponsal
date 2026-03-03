@@ -112,14 +112,34 @@ export default function NuevaSucursal() {
 
       if (profileError) throw profileError;
 
-      Toast.fire({
+      // Mostrar mensaje claro de confirmar correo
+      await Swal.fire({
         icon: 'success',
-        title: 'Corresponsal y Administrador creados'
+        title: '¡Corresponsal Creado!',
+        html: `
+          <div style="text-align: center;">
+            <p style="font-size: 1.1rem; margin-bottom: 12px;">
+              Se ha enviado un correo de confirmación a:
+            </p>
+            <p style="font-size: 1.2rem; font-weight: bold; color: #d4a017; margin-bottom: 16px;">
+              📧 ${adminEmail}
+            </p>
+            <hr style="opacity: 0.2; margin: 16px 0;" />
+            <p style="font-size: 0.95rem; color: #666;">
+              <strong>⚠️ Importante:</strong> El administrador debe abrir su correo y 
+              <strong>hacer clic en el enlace de confirmación</strong> antes de poder iniciar sesión.
+            </p>
+            <p style="font-size: 0.85rem; color: #999; margin-top: 12px;">
+              Revise también la carpeta de spam o correo no deseado.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'Entendido, ir al Login',
+        confirmButtonColor: '#ffdd00',
+        allowOutsideClick: false,
       });
 
-      setTimeout(() => {
-        router.push(`/login`);
-      }, 2000);
+      router.push(`/login`);
 
     } catch (error: any) {
       setLoading(false);
