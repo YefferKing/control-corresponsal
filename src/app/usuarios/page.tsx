@@ -5,8 +5,10 @@ import { supabase } from '@/lib/supabase';
 import UserForm from '@/components/UserForm';
 import Swal from 'sweetalert2';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function UsuariosPage() {
+function UsuariosContent() {
+
   const [showForm, setShowForm] = useState(false);
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [sucursalId, setSucursalId] = useState<string | null>(null);
@@ -243,3 +245,16 @@ export default function UsuariosPage() {
     </div>
   );
 }
+
+export default function UsuariosPage() {
+  return (
+    <Suspense fallback={
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-warning"></div>
+      </div>
+    }>
+      <UsuariosContent />
+    </Suspense>
+  );
+}
+
