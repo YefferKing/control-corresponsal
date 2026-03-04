@@ -122,16 +122,42 @@ export default function UserForm({
         });
 
         if (authError) throw authError;
-        if (!authData.user) throw new Error('El usuario ya existe');
+        
+        // Supabase no lanza error si el email ya existe.
+        // En su lugar devuelve un user con identities vacías.
+        if (!authData.user || (authData.user.identities && authData.user.identities.length === 0)) {
+          throw new Error('Este correo electrónico ya está registrado en el sistema. Usa otro correo o contacta al administrador.');
+        }
 
-        const { error: profileError } = await supabase
-          .from('perfiles')
-          .insert([{
-            id: authData.user.id,
-            nombre_completo: nombre,
-            sucursal_id: sucursalId,
-            rol_id: rolId
-          }]);
+        // Pequeña espera para que auth.users sea visible a la FK de perfiles
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Intentar insertar el perfil con reintentos por si la FK tarda
+        let profileError = null;
+        for (let intento = 0; intento < 3; intento++) {
+          const { error } = await supabase
+            .from('perfiles')
+            .insert([{
+              id: authData.user.id,
+              nombre_completo: nombre,
+              sucursal_id: sucursalId,
+              rol_id: rolId
+            }]);
+          
+          if (!error) {
+            profileError = null;
+            break;
+          }
+          
+          // Si es error de FK, esperar y reintentar
+          if (error.code === '23503' && intento < 2) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            profileError = error;
+          } else {
+            profileError = error;
+            break;
+          }
+        }
 
         if (profileError) throw profileError;
 
@@ -143,6 +169,8 @@ export default function UserForm({
       let mensaje = error.message;
       if (mensaje.includes('email rate limit exceeded')) {
         mensaje = "Has realizado demasiados intentos de registro seguidos. Por seguridad del banco, por favor espera 5 minutos o intenta con un correo diferente.";
+      } else if (mensaje.includes('perfiles_id_fkey') || (error.code === '23503' && mensaje.includes('perfiles'))) {
+        mensaje = "No se pudo vincular el perfil al usuario de autenticación. Esto puede ocurrir si el correo ya estaba registrado previamente. Intenta con un correo diferente.";
       }
 
       Swal.fire({

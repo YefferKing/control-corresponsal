@@ -97,18 +97,41 @@ export default function NuevaSucursal() {
       });
 
       if (authError) throw authError;
-      if (!authData.user) throw new Error("El usuario ya existe o hubo un error en Auth.");
+      
+      // Supabase no lanza error si el email ya existe.
+      // En su lugar devuelve un user con identities vacías.
+      if (!authData.user || (authData.user.identities && authData.user.identities.length === 0)) {
+        throw new Error('Este correo electrónico ya está registrado. Usa otro correo.');
+      }
 
-      // 6. Crear el Perfil vinculado
-      const { error: profileError } = await supabase
-        .from('perfiles')
-        .insert([{
-          id: authData.user.id,
-          nombre_completo: adminNombre,
-          sucursal_id: sucursalId,
-          rol_id: finalRoleId
-        }]);
+      // Pequeña espera para que auth.users sea visible a la FK de perfiles
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // 6. Crear el Perfil vinculado (con reintentos por FK timing)
+      let profileError = null;
+      for (let intento = 0; intento < 3; intento++) {
+        const { error } = await supabase
+          .from('perfiles')
+          .insert([{
+            id: authData.user.id,
+            nombre_completo: adminNombre,
+            sucursal_id: sucursalId,
+            rol_id: finalRoleId
+          }]);
+
+        if (!error) {
+          profileError = null;
+          break;
+        }
+
+        if (error.code === '23503' && intento < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          profileError = error;
+        } else {
+          profileError = error;
+          break;
+        }
+      }
 
       if (profileError) throw profileError;
 
