@@ -83,12 +83,14 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
   };
 
   const hasPermission = (slug: string) => {
-    // Si no hay perfil, no hay permiso
     if (!profile) return false;
-    const roleName = profile.roles?.nombre?.toUpperCase() || '';
-    // El ADMINISTRADOR DEL SISTEMA / MASTER tiene todos los permisos por defecto
-    if (roleName.includes('ADMIN') || roleName.includes('MASTER') || roleName.includes('SISTEMA')) return true;
-    return permisos.includes(slug);
+    
+    // EXCEPCIÓN: Root access (Yefferson)
+    if (user?.email === 'yeffersonpeinado@gmail.com') return true;
+
+    // Aplanar los slugs de permisos para fácil chequeo
+    const userPermisos = profile.roles?.roles_permisos?.map((rp: any) => rp.permiso_slug) || [];
+    return userPermisos.includes(slug);
   };
 
   const handleLogout = async () => {
@@ -159,25 +161,37 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
               </Link>
             )}
 
-            {(hasPermission('gestionar_sucursal') || hasPermission('ver_dashboard')) && (
+            {(hasPermission('registrar_gastos') || hasPermission('gestionar_prestamos') || hasPermission('gestionar_cuentas_pagar') || hasPermission('gestionar_sucursal') || hasPermission('ver_dashboard')) && (
               <>
                 <div className="small text-white-50 mb-2 mt-4 ps-2 text-uppercase fw-bold" style={{fontSize: '0.7rem', letterSpacing: '1px'}}>Contabilidad y Caja</div>
-                <Link href="/caja/gastos" className={`sidebar-link ${isActive('/caja/gastos')}`}>
-                  <i className="bi bi-wallet2"></i> Registrar Gastos
-                </Link>
-                <Link href="/caja/prestamos" className={`sidebar-link ${isActive('/caja/prestamos')}`}>
-                  <i className="bi bi-cash-coin"></i> Préstamos a Terceros
-                </Link>
-                <Link href="/caja/cuentas-por-pagar" className={`sidebar-link ${isActive('/caja/cuentas-por-pagar')}`}>
-                  <i className="bi bi-receipt-cutoff"></i> Cuentas por Pagar
-                </Link>
-                <Link href="/caja/terceros" className={`sidebar-link ${isActive('/caja/terceros')}`}>
-                  <i className="bi bi-person-rolodex"></i> Directorio Terceros
-                </Link>
+                {hasPermission('registrar_gastos') && (
+                  <Link href="/caja/gastos" className={`sidebar-link ${isActive('/caja/gastos')}`}>
+                    <i className="bi bi-wallet2"></i> Registrar Gastos
+                  </Link>
+                )}
+                {hasPermission('gestionar_prestamos') && (
+                  <>
+                    <Link href="/caja/prestamos" className={`sidebar-link ${isActive('/caja/prestamos')}`}>
+                      <i className="bi bi-cash-coin"></i> Préstamos a Terceros
+                    </Link>
+                    <Link href="/caja/terceros" className={`sidebar-link ${isActive('/caja/terceros')}`}>
+                      <i className="bi bi-person-rolodex"></i> Directorio Terceros
+                    </Link>
+                  </>
+                )}
+                {hasPermission('gestionar_cuentas_pagar') && (
+                  <Link href="/caja/cuentas-por-pagar" className={`sidebar-link ${isActive('/caja/cuentas-por-pagar')}`}>
+                    <i className="bi bi-receipt-cutoff"></i> Cuentas por Pagar
+                  </Link>
+                )}
               </>
             )}
 
-            {(profile?.roles?.nombre?.toUpperCase().includes('ADMIN') || profile?.roles?.nombre?.toUpperCase().includes('MASTER') || profile?.roles?.nombre?.toUpperCase().includes('SISTEMA')) && (
+            {/* Administración Dinámica */}
+            {(hasPermission('gestionar_usuarios') || 
+              hasPermission('gestionar_roles') || 
+              hasPermission('gestionar_tarifas') || 
+              hasPermission('gestionar_sucursal')) && (
               <>
                 <div className="small text-white-50 mb-2 mt-4 ps-2 text-uppercase fw-bold" style={{fontSize: '0.7rem', letterSpacing: '1px'}}>Administración</div>
                 {hasPermission('gestionar_usuarios') && (
@@ -206,21 +220,25 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
               </>
             )}
 
-            {(profile?.roles?.nombre?.toUpperCase().includes('ADMIN') || 
-              profile?.roles?.nombre?.toUpperCase().includes('MASTER') || 
-              profile?.roles?.nombre?.toUpperCase().includes('SISTEMA')) && (
+            {/* Reportes Dinámicos */}
+            {(hasPermission('ver_reporte_movimientos') || hasPermission('gestionar_sucursal')) && (
               <>
                 <div className="small text-white-50 mb-2 mt-4 ps-2 text-uppercase fw-bold" style={{fontSize: '0.7rem', letterSpacing: '1px'}}>Reportes y Análisis</div>
-                <Link href="/reportes/movimientos" className={`sidebar-link ${isActive('/reportes/movimientos')}`}>
-                  <i className="bi bi-graph-up-arrow"></i> Reporte de Movimientos
-                </Link>
-                <Link href="/reportes/contador-monedas" className={`sidebar-link ${isActive('/reportes/contador-monedas')}`}>
-                  <i className="bi bi-card-checklist"></i> Historial Contador
-                </Link>
+                {hasPermission('ver_reporte_movimientos') && (
+                  <>
+                    <Link href="/reportes/movimientos" className={`sidebar-link ${isActive('/reportes/movimientos')}`}>
+                      <i className="bi bi-graph-up-arrow"></i> Reporte de Movimientos
+                    </Link>
+                    <Link href="/reportes/contador-monedas" className={`sidebar-link ${isActive('/reportes/contador-monedas')}`}>
+                      <i className="bi bi-card-checklist"></i> Historial Contador
+                    </Link>
+                  </>
+                )}
               </>
             )}
             
-            {profile?.roles?.nombre?.toUpperCase().includes('SISTEMA') && user?.email === 'yeffersonpeinado@gmail.com' && (
+            {/* Solo Control Total - Yefferson */}
+            {user?.email === 'yeffersonpeinado@gmail.com' && (
               <>
                 <div className="small text-white-50 mb-2 mt-4 ps-2 text-uppercase fw-bold" style={{fontSize: '0.7rem', letterSpacing: '1px'}}>Sistema Master</div>
                 <Link href="/admin/corresponsales" className={`sidebar-link ${isActive('/admin/corresponsales')}`}>

@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import UserForm from '@/components/UserForm';
 import Swal from 'sweetalert2';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 function UsuariosContent() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_usuarios')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para gestionar usuarios.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
 
   const [showForm, setShowForm] = useState(false);
   const [usuarios, setUsuarios] = useState<any[]>([]);

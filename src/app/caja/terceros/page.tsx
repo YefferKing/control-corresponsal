@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Toast } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function GestionTerceros() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_prestamos')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para gestionar terceros.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
   const [nombre, setNombre] = useState('');
   const [identificacion, setIdentificacion] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -16,7 +26,6 @@ export default function GestionTerceros() {
   const [terceros, setTerceros] = useState<any[]>([]);
   const [sucursal, setSucursal] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     fetchInitialData();

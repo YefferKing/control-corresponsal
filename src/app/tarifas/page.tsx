@@ -2,9 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
+import Swal from 'sweetalert2';
 import Link from 'next/link';
 
 export default function TarifasPage() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_tarifas')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para ver tarifas.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
   const [sucursal, setSucursal] = useState<any>(null);
 
   useEffect(() => {

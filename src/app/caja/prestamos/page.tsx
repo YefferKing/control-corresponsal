@@ -6,8 +6,18 @@ import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import { Toast } from '@/lib/utils';
 import Link from 'next/link';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function GestionPrestamos() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_prestamos')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para gestionar préstamos.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
   const [monto, setMonto] = useState('');
   const [tercero, setTercero] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -22,7 +32,6 @@ export default function GestionPrestamos() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     fetchInitialData();

@@ -6,7 +6,18 @@ import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import { Toast } from '@/lib/utils';
 
+import { usePermissions } from '@/hooks/usePermissions';
+
 export default function ConfigurarSucursal() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_sucursal')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para configurar la sucursal.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -19,8 +30,6 @@ export default function ConfigurarSucursal() {
     nit: '',
     logo_url: ''
   });
-  
-  const router = useRouter();
 
   useEffect(() => {
     fetchSucursal();

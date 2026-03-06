@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Toast } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function Dashboard() {
   const [sucursal, setSucursal] = useState<any>(null);
@@ -29,9 +30,19 @@ export default function Dashboard() {
   const [resumenFiltrado, setResumenFiltrado] = useState({ entradasCount: 0, entradasMonto: 0, salidasCount: 0, salidasMonto: 0 });
   const PAGE_SIZE = 10;
   const router = useRouter();
+  const { hasPermission, profile: userProfile, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('ver_dashboard')) {
+      Swal.fire('Sin Acceso', 'No tienes permisos para ver el Dashboard.', 'warning');
+      router.push('/');
+      return;
+    }
+  }, [permLoading, userProfile]);
 
   useEffect(() => {
     fetchData();
+    // ... rest of the code
 
     // Actualizar reloj cada segundo
     const clockInterval = setInterval(() => {
@@ -66,29 +77,25 @@ export default function Dashboard() {
       setProfile(profile);
       setSucursal(profile.sucursales);
       
-      const roleName = profile.roles?.nombre?.toUpperCase() || '';
-      const esAdmin = roleName.includes('ADMIN') || roleName.includes('MASTER') || roleName.includes('SISTEMA');
+      const soyAdmin = hasPermission('gestionar_sucursal');
 
       let query = supabase
         .from('transacciones')
         .select('*, perfiles(nombre_completo), sucursales(nombre, codigo_punto)', { count: 'exact' })
         .eq('sucursal_id', profile.sucursal_id);
       
-      // Filtro por Usuario (Si no es admin, solo ve lo suyo)
-      if (!esAdmin) {
+      // Filtro por Usuario (Si no es admin de la sucursal, solo ve lo suyo)
+      if (!soyAdmin) {
         query = query.eq('usuario_id', session.user.id);
       }
       
       if (searchTerm) {
-        // Limpiar el término de búsqueda por si el usuario ingresa puntos o comas (ej: 20.000 -> 20000)
+        // ... previous search logic
         const cleanSearch = searchTerm.replace(/\./g, '').replace(/,/g, '');
         let orFilter = `tipo.ilike.%${searchTerm}%,estado.ilike.%${searchTerm}%`;
-        
-        // Si es un número válido, buscamos por monto exacto también
         if (!isNaN(Number(cleanSearch)) && cleanSearch !== '') {
           orFilter += `,monto.eq.${cleanSearch}`;
         }
-        
         query = query.or(orFilter);
       }
 
@@ -100,14 +107,14 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       
-      // Calcular Totales para el set de datos filtrado (Independiente de la paginación)
+      // Calcular Totales
       let totalsQuery = supabase
         .from('transacciones')
         .select('monto, tipo')
         .eq('sucursal_id', profile.sucursal_id)
         .eq('estado', 'aprobada');
       
-      if (!esAdmin) totalsQuery = totalsQuery.eq('usuario_id', session.user.id);
+      if (!soyAdmin) totalsQuery = totalsQuery.eq('usuario_id', session.user.id);
       if (dateStart) totalsQuery = totalsQuery.gte('created_at', new Date(dateStart).toISOString());
       if (dateEnd) totalsQuery = totalsQuery.lte('created_at', new Date(dateEnd + 'T23:59:59').toISOString());
 
@@ -417,6 +424,10 @@ export default function Dashboard() {
   };
 
   const handleAnular = async (t: any) => {
+    if (!hasPermission('anular_transaccion')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para anular transacciones.', 'error');
+      return;
+    }
     const result = await Swal.fire({
       title: '¿Anular transacción?',
       text: `Se revertirá el valor de $${Number(t.monto).toLocaleString()} del cupo.`,
@@ -608,8 +619,7 @@ export default function Dashboard() {
   const saldoEnCaja = sucursal ? sucursal.cupo_actual : 0;
   const cupoDisponible = sucursal ? (sucursal.cupo_limite - sucursal.cupo_actual) : 0;
   
-  const roleName = profile?.roles?.nombre?.toUpperCase() || '';
-  const esAdmin = roleName.includes('ADMIN') || roleName.includes('MASTER') || roleName.includes('SISTEMA');
+  const soyAdmin = hasPermission('gestionar_sucursal');
 
   return (
     <div className="min-vh-100 bg-light py-4">
@@ -688,19 +698,25 @@ export default function Dashboard() {
             <button onClick={handleCompensar} className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0">Compensaciones</button>
             <Link href="/operaciones/contador-monedas" className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0 text-decoration-none">Contador de Monedas</Link>
             
-            {esAdmin && (
+            {soyAdmin && (
               <>
-                <Link href="/reportes/movimientos" className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0 text-decoration-none">Reporte de Movimientos</Link>
-                <button onClick={handleRealizarCierre} className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0">Realizar Cierre</button>
+                {hasPermission('ver_reporte_movimientos') && (
+                  <Link href="/reportes/movimientos" className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0 text-decoration-none">Reporte de Movimientos</Link>
+                )}
+                {hasPermission('gestionar_sucursal') && (
+                  <button onClick={handleRealizarCierre} className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-nowrap text-dark shadow-sm border-0">Realizar Cierre</button>
+                )}
                 <div className="ms-auto d-flex gap-2">
-                    <button 
-                      onClick={generarReporteCierre}
-                      className="btn btn-outline-dark rounded-circle shadow-sm" 
-                      style={{width: '42px', height: '42px'}}
-                      title="Cierre de Caja"
-                    >
-                      <i className="bi bi-file-earmark-pdf"></i>
-                    </button>
+                    {hasPermission('gestionar_sucursal') && (
+                      <button 
+                        onClick={generarReporteCierre}
+                        className="btn btn-outline-dark rounded-circle shadow-sm" 
+                        style={{width: '42px', height: '42px'}}
+                        title="Cierre de Caja"
+                      >
+                        <i className="bi bi-file-earmark-pdf"></i>
+                      </button>
+                    )}
                 </div>
               </>
             )}
@@ -708,7 +724,7 @@ export default function Dashboard() {
 
         <div className="row g-4 mb-4">
             {/* GANANCIAS - SOLO ADMIN */}
-            {esAdmin && (
+            {soyAdmin && (
                 <div className="col-md-3">
                     <div className="card border-0 shadow-sm rounded-4 text-white p-4 h-100" style={{backgroundColor: '#1a1a1a'}}>
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
@@ -721,7 +737,7 @@ export default function Dashboard() {
             )}
 
             {/* ESTADÍSTICAS / BARRA DE PROGRESO */}
-            <div className={esAdmin ? "col-md-9" : "col-md-12"}>
+            <div className={soyAdmin ? "col-md-9" : "col-md-12"}>
                 <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <span className="small fw-bold text-muted text-uppercase">Distribución de Capital Operativo</span>
@@ -792,8 +808,8 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                        {/* RESUMEN FILTRADO - SOLO ADMIN */}
-                        {esAdmin && (
+                        {/* RESUMEN FILTRADO - SOLO CON PERMISO */}
+                        {soyAdmin && (
                             <div className="row mt-3 g-2">
                                 <div className="col-md-4 col-6">
                                     <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-10 h-100">
@@ -832,7 +848,7 @@ export default function Dashboard() {
                                     <th className="text-end">Monto</th>
                                     <th className="text-center">Flujo</th>
                                     <th className="text-center">Estado</th>
-                                    {esAdmin && <th className="text-center pe-4">Acciones</th>}
+                                    {soyAdmin && <th className="text-center pe-4">Acciones</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -864,7 +880,7 @@ export default function Dashboard() {
                                                         {t.estado?.toUpperCase() || 'APROBADA'}
                                                     </span>
                                                 </td>
-                                                {esAdmin && (
+                                                {soyAdmin && (
                                                     <td className="text-center pe-4">
                                                         <div className="dropdown">
                                                             <button 

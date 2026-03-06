@@ -55,10 +55,7 @@ export default function UserForm({
           const name = r.nombre.toUpperCase();
           const isSystemRole = name.includes('SISTEMA') || name.includes('MASTER');
           
-          // EXCEPCIÓN: Permitir siempre el rol de "ADMINISTRADOR" o que contenga "ADMIN"
-          // a menos que sea específicamente el Maestro del Sistema
-          if (name.includes('ADMIN')) return true;
-          
+          // Solo el dueño puede ver y asignar roles de SISTEMA o MASTER
           if (isSystemRole) return esDuenio;
           return true;
         });

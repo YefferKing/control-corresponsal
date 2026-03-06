@@ -6,8 +6,18 @@ import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import { Toast } from '@/lib/utils';
 import Link from 'next/link';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function GestionGastos() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('registrar_gastos')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para registrar gastos.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -18,7 +28,6 @@ export default function GestionGastos() {
   const [profile, setProfile] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     fetchInitialData();

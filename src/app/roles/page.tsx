@@ -2,9 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
 import Swal from 'sweetalert2';
 
 export default function RolesManager() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('gestionar_roles')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para gestionar roles.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
+
   const [roles, setRoles] = useState<any[]>([]);
   const [permisosDisponibles, setPermisosDisponibles] = useState<any[]>([]);
   const [nombreRol, setNombreRol] = useState('');
@@ -113,15 +125,6 @@ export default function RolesManager() {
   };
 
   const handleEdit = (rol: any) => {
-    // REGLA: Solo un administrador puede editar el rol ADMIN
-    const esAdminRole = rol.nombre.toUpperCase().includes('ADMIN');
-    const yoSoyAdmin = currentUserRole.includes('ADMIN');
-
-    if (esAdminRole && !yoSoyAdmin) {
-      Swal.fire('Acceso Denegado', 'No tienes permisos para modificar el rol de Administrador.', 'warning');
-      return;
-    }
-
     setEditingId(rol.id);
     setNombreRol(rol.nombre);
     setPermisosSeleccionados(rol.roles_permisos.map((rp: any) => rp.permiso_slug));
@@ -129,12 +132,6 @@ export default function RolesManager() {
   };
 
   const handleDelete = async (id: string, nombre: string) => {
-    const esAdminRole = nombre.toUpperCase().includes('ADMIN');
-    if (esAdminRole) {
-      Swal.fire('Prohibido', 'El rol de Administrador es vital para el sistema y no puede ser eliminado.', 'error');
-      return;
-    }
-
     const result = await Swal.fire({
       title: '¿Confirmar eliminación?',
       text: `El rol "${nombre}" será borrado permanentemente.`,
@@ -270,23 +267,18 @@ export default function RolesManager() {
                           const name = rol.nombre.toUpperCase();
                           const isMasterRole = name.includes('MASTER') || name.includes('SISTEMA');
                           
-                          // EXCEPCIÓN: Si es un rol de ADMINISTRADOR, siempre es visible
-                          if (name.includes('ADMIN')) return true;
-
-                          // SEGURIDAD: Solo el dueño master real puede ver roles de SISTEMA/MASTER puros
+                          // Solo el dueño master real puede ver y gestionar roles marcados como del SISTEMA
                           if (isMasterRole) {
                             return currentUserEmail === 'yeffersonpeinado@gmail.com';
                           }
                           return true;
                         })
                         .map(rol => {
-                          const esAdminRole = rol.nombre.toUpperCase().includes('ADMIN');
                           return (
-                            <tr key={rol.id} className={esAdminRole ? 'bg-light bg-opacity-50' : ''}>
+                            <tr key={rol.id}>
                             <td className="ps-4 py-3">
-                              <span className={`fw-bold ${esAdminRole ? 'text-dark' : 'text-dark opacity-75'}`}>
+                              <span className="fw-bold text-dark">
                                 {rol.nombre}
-                                {esAdminRole && <i className="bi bi-patch-check-fill text-primary ms-1" title="Rol Maestro"></i>}
                               </span>
                             </td>
                             <td className="py-3">
@@ -307,15 +299,13 @@ export default function RolesManager() {
                               >
                                 <i className="bi bi-pencil-square fs-5"></i>
                               </button>
-                              {!esAdminRole && (
-                                <button 
-                                  className="btn btn-white border-0 border-start py-2 px-3 text-danger" 
-                                  title="Eliminar Rol" 
-                                  onClick={() => handleDelete(rol.id, rol.nombre)}
-                                >
-                                  <i className="bi bi-trash fs-5"></i>
-                                </button>
-                              )}
+                              <button 
+                                className="btn btn-white border-0 border-start py-2 px-3 text-danger" 
+                                title="Eliminar Rol" 
+                                onClick={() => handleDelete(rol.id, rol.nombre)}
+                              >
+                                <i className="bi bi-trash fs-5"></i>
+                              </button>
                             </div>
                             </td>
                           </tr>

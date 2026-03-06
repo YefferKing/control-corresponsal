@@ -6,13 +6,25 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Toast } from '@/lib/utils';
 
+import { usePermissions } from '@/hooks/usePermissions';
+import Swal from 'sweetalert2';
+
 export default function ReporteContadorMonedas() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
   const [reporte, setReporte] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateStart, setDateStart] = useState(new Date().toISOString().split('T')[0]);
   const [dateEnd, setDateEnd] = useState(new Date().toISOString().split('T')[0]);
   const [profile, setProfile] = useState<any>(null);
-  const router = useRouter();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('ver_reporte_movimientos')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para ver el historial del contador.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
 
   useEffect(() => {
     fetchInitialData();
@@ -38,10 +50,6 @@ export default function ReporteContadorMonedas() {
       .single();
 
     if (profileData) {
-      if (!profileData.roles?.nombre?.toUpperCase().includes('ADMIN')) {
-        router.push('/dashboard');
-        return;
-      }
       setProfile(profileData);
     }
   }

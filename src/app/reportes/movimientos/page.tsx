@@ -3,11 +3,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
+import Swal from 'sweetalert2';
 import Link from 'next/link';
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function ReporteMovimientos() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
   const [loading, setLoading] = useState(true);
   const [sucursal, setSucursal] = useState<any>(null);
   const [transacciones, setTransacciones] = useState<any[]>([]);
@@ -15,7 +21,13 @@ export default function ReporteMovimientos() {
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [retefuente, setRetefuente] = useState(6); // Porcentaje de retención por defecto
-  const router = useRouter();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('ver_reporte_movimientos')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para ver reportes de movimientos.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
 
   useEffect(() => {
     fetchInitialData();

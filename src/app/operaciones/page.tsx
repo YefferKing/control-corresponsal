@@ -6,15 +6,25 @@ import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import { calcularComision } from '@/lib/tarifas';
 import { Toast } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function NuevaOperacion() {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissions();
+
   const [tipo, setTipo] = useState<'consignacion' | 'retiro' | 'pago'>('consignacion');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
   const [sucursal, setSucursal] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [tarifasConfig, setTarifasConfig] = useState<any>(null);
-  const router = useRouter();
+
+  useEffect(() => {
+    if (!permLoading && !hasPermission('realizar_consignacion') && !hasPermission('realizar_retiro') && !hasPermission('realizar_pago')) {
+      Swal.fire('Acceso Denegado', 'No tienes permisos para realizar ninguna operación.', 'error');
+      router.push('/dashboard');
+    }
+  }, [permLoading]);
 
 
 
@@ -66,6 +76,12 @@ export default function NuevaOperacion() {
 
     if (isNaN(valorMonto) || valorMonto <= 0) {
       Toast.fire({ icon: 'error', title: 'Ingrese un monto válido' });
+      return;
+    }
+
+    const permisoNecesario = tipo === 'consignacion' ? 'realizar_consignacion' : (tipo === 'retiro' ? 'realizar_retiro' : 'realizar_pago');
+    if (!hasPermission(permisoNecesario)) {
+      Swal.fire('Acceso Denegado', `No tienes permisos para realizar ${tipo === 'pago' ? 'pagos' : (tipo === 'retiro' ? 'retiros' : 'consignaciones')}.`, 'error');
       return;
     }
 
@@ -190,11 +206,6 @@ export default function NuevaOperacion() {
                       <span className="text-muted small">Cupo Disponible: <strong className="text-dark">${Number(sucursal.cupo_limite - sucursal.cupo_actual).toLocaleString('es-CO', { minimumFractionDigits: 0 })}</strong></span>
                       <span className="text-muted small">Saldo en Caja: <strong className="text-dark">${Number(sucursal.cupo_actual).toLocaleString('es-CO', { minimumFractionDigits: 0 })}</strong></span>
                     </div>
-                    {monto && (
-                      <div className="text-md-end">
-                        <span className="text-success fw-bold small">Ganancia estimada: +${calcularComision(parseFloat(monto.replace(/\./g, '')) || 0, tipo, tarifasConfig).toLocaleString('es-CO', { minimumFractionDigits: 0 })}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
